@@ -7,10 +7,6 @@ It looks up individual and organizational NPI records, searches the registry, va
 ## Install
 
 ```sh
-bun add @affinity-health/npi
-```
-
-```sh
 npm install @affinity-health/npi
 ```
 
