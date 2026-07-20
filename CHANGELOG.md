@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## Unreleased
 
+## 1.1.2 - 2026-07-19
+
+### Fixed
+
+- Published README metadata so npmjs renders the installation and usage guide.
+
 ## 1.1.1 - 2026-07-19
 
 ### Changed
