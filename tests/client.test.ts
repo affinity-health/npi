@@ -68,10 +68,11 @@ describe("NppesClient.search", () => {
         enumerationType: "NPI-1",
         firstName: "Jane",
         lastName: "Smith",
+        number: "1003000126",
         state: "mi",
         useFirstNameAlias: false,
       },
-      { limit: 25, skip: 50 },
+      { limit: 25, pretty: true, skip: 50 },
     );
 
     expect(result).toEqual({ resultCount: 1, results: [individual] });
@@ -81,6 +82,8 @@ describe("NppesClient.search", () => {
       first_name: "Jane",
       last_name: "Smith",
       limit: "25",
+      number: "1003000126",
+      pretty: "on",
       skip: "50",
       state: "MI",
       use_first_name_alias: "False",
@@ -115,6 +118,23 @@ describe("NppesClient.search", () => {
     const error = await client.search({ state: "MI" }).catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(NppesApiError);
     expect((error as NppesApiError).issues[0]?.field).toBe("state");
+  });
+
+  test("can return the untouched NPPES error envelope", async () => {
+    const upstream = {
+      Errors: [
+        {
+          description: "Field state requires additional search criteria",
+          field: "state",
+          number: "07",
+        },
+      ],
+    };
+    const client = new NppesClient({
+      fetch: vi.fn<typeof fetch>().mockResolvedValue(jsonResponse(upstream)),
+    });
+
+    await expect(client.query({ state: "MI" })).resolves.toEqual(upstream);
   });
 
   test("retries transient responses", async () => {

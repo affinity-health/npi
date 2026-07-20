@@ -11,6 +11,8 @@ import type {
   NpiRecord,
   NppesApiIssue,
   NppesClientOptions,
+  NppesRawResponse,
+  NppesRawSearchResult,
   NppesRequestOptions,
   NppesSearchAllOptions,
   NppesSearchCriteria,
@@ -24,12 +26,6 @@ const MAX_LIMIT = 200;
 const MAX_SKIP = 1_000;
 const MAX_RETRY_AFTER_MS = 30_000;
 const RETRYABLE_STATUS_CODES = new Set([429, 502, 503, 504]);
-
-type RawSearchResponse = {
-  Errors?: NppesApiIssue[];
-  result_count?: number;
-  results?: NpiRecord[];
-};
 
 export class NppesClient {
   readonly baseUrl: URL;
@@ -55,9 +51,11 @@ export class NppesClient {
     const npi = normalizeNpi(npiValue);
     if (!isValidNpi(npi)) throw new InvalidNpiError(`Invalid NPI: ${npiValue}`);
 
-    const response = await this.#request(
-      new URLSearchParams({ number: npi, version: API_VERSION }),
-      options.signal,
+    const response = unwrapResponse(
+      await this.#request(
+        new URLSearchParams({ number: npi, version: API_VERSION }),
+        options.signal,
+      ),
     );
     return response.results.find((record) => record.number === npi) ?? null;
   }
@@ -66,12 +64,22 @@ export class NppesClient {
     criteria: NppesSearchCriteria,
     options: NppesSearchOptions = {},
   ): Promise<NppesSearchResult> {
+    const response = unwrapResponse(await this.query(criteria, options));
+    return { resultCount: response.result_count, results: response.results };
+  }
+
+  /** Return the validated upstream envelope without renaming fields or converting API issues to errors. */
+  async query(
+    criteria: NppesSearchCriteria,
+    options: NppesSearchOptions = {},
+  ): Promise<NppesRawResponse> {
     const limit = assertIntegerInRange(options.limit ?? 10, "limit", 1, MAX_LIMIT);
     const skip = assertIntegerInRange(options.skip ?? 0, "skip", 0, MAX_SKIP);
     const params = searchParams(criteria);
     params.set("version", API_VERSION);
     params.set("limit", String(limit));
     params.set("skip", String(skip));
+    if (options.pretty) params.set("pretty", "on");
     return this.#request(params, options.signal);
   }
 
@@ -91,7 +99,7 @@ export class NppesClient {
     return results;
   }
 
-  async #request(params: URLSearchParams, signal?: AbortSignal): Promise<NppesSearchResult> {
+  async #request(params: URLSearchParams, signal?: AbortSignal): Promise<NppesRawResponse> {
     const url = new URL(this.baseUrl);
     url.search = params.toString();
 
@@ -160,6 +168,7 @@ export class NppesClient {
 
 function searchParams(criteria: NppesSearchCriteria): URLSearchParams {
   const params = new URLSearchParams();
+  append(params, "number", criteria.number);
   append(params, "enumeration_type", criteria.enumerationType);
   append(params, "taxonomy_description", criteria.taxonomyDescription);
   append(params, "name_purpose", criteria.namePurpose);
@@ -190,16 +199,25 @@ function append(params: URLSearchParams, key: string, value: string | undefined)
   if (normalized) params.set(key, normalized);
 }
 
-function parseResponse(value: unknown): NppesSearchResult {
+function parseResponse(value: unknown): NppesRawResponse {
   if (!isObject(value)) throw new NppesResponseError("NPPES returned an unexpected response");
 
-  const body = value as RawSearchResponse;
-  if (Array.isArray(body.Errors) && body.Errors.length > 0) throw new NppesApiError(body.Errors);
-  if (!Number.isInteger(body.result_count) || !Array.isArray(body.results)) {
+  if ("Errors" in value && Array.isArray(value.Errors)) {
+    return { Errors: value.Errors as NppesApiIssue[] };
+  }
+  if (!Number.isInteger(value.result_count) || !Array.isArray(value.results)) {
     throw new NppesResponseError("NPPES response is missing result_count or results");
   }
 
-  return { resultCount: body.result_count ?? 0, results: body.results };
+  return {
+    result_count: value.result_count as number,
+    results: value.results as NpiRecord[],
+  };
+}
+
+function unwrapResponse(response: NppesRawResponse): NppesRawSearchResult {
+  if ("Errors" in response) throw new NppesApiError(response.Errors);
+  return response;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

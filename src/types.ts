@@ -1,8 +1,10 @@
 export type NppesEnumerationType = "NPI-1" | "NPI-2";
-export type NppesNamePurpose = "AO" | "PROVIDER";
+export type NppesNamePurpose = "AO" | "PROVIDER" | "Provider";
 export type NppesAddressPurpose = "LOCATION" | "MAILING" | "PRIMARY" | "SECONDARY";
+export type NppesAddressType = "DOM" | "FGN" | "MIL";
 
 export type NppesSearchCriteria = {
+  number?: string;
   enumerationType?: NppesEnumerationType;
   taxonomyDescription?: string;
   namePurpose?: NppesNamePurpose;
@@ -23,6 +25,7 @@ export type NppesRequestOptions = {
 
 export type NppesSearchOptions = NppesRequestOptions & {
   limit?: number;
+  pretty?: boolean;
   skip?: number;
 };
 
@@ -48,7 +51,7 @@ export type NpiAddress = {
   address_1?: string;
   address_2?: string;
   address_purpose?: "LOCATION" | "MAILING";
-  address_type?: "DOM" | "FOREIGN";
+  address_type?: NppesAddressType;
   city?: string;
   country_code?: string;
   country_name?: string;
@@ -69,6 +72,9 @@ export type NpiBasic = {
   authorized_official_title_or_position?: string;
   certification_date?: string;
   credential?: string;
+  deactivation_date?: string;
+  deactivation_reason_code?: string;
+  ein?: string;
   enumeration_date?: string;
   first_name?: string;
   last_name?: string;
@@ -78,8 +84,10 @@ export type NpiBasic = {
   name_suffix?: string;
   organization_name?: string;
   organizational_subpart?: "YES" | "NO";
-  parent_organization_lbn?: string;
-  parent_organization_tin?: string;
+  parent_organization_ein?: string;
+  parent_organization_legal_business_name?: string;
+  reactivation_date?: string;
+  replacement_npi?: string;
   sex?: "F" | "M";
   sole_proprietor?: "YES" | "NO";
   status?: "A" | "D";
@@ -87,7 +95,7 @@ export type NpiBasic = {
 
 export type NpiTaxonomy = {
   code?: string;
-  desc?: string;
+  desc?: string | null;
   license?: string | null;
   primary?: boolean;
   state?: string | null;
@@ -98,8 +106,8 @@ export type NpiIdentifier = {
   code?: string;
   desc?: string;
   identifier?: string;
-  issuer?: string;
-  state?: string;
+  issuer?: string | null;
+  state?: string | null;
 };
 
 export type NpiOtherName = {
@@ -115,10 +123,13 @@ export type NpiOtherName = {
 };
 
 export type NpiEndpoint = {
-  affiliation?: string;
-  affiliationName?: string;
   address_1?: string;
   address_2?: string;
+  address_type?: NppesAddressType;
+  affiliation?: string;
+  affiliationName?: string;
+  /** Spelling shown in the CMS conversion table; live responses currently use affiliationName. */
+  affliationName?: string;
   city?: string;
   contentOtherDescription?: string;
   contentType?: string;
@@ -133,12 +144,14 @@ export type NpiEndpoint = {
   state?: string;
   use?: string;
   useDescription?: string;
+  useOtherDescription?: string;
 };
 
 export type NpiPracticeLocation = {
   address_1?: string;
   address_2?: string;
-  address_type?: string;
+  address_purpose?: "LOCATION";
+  address_type?: NppesAddressType;
   city?: string;
   country_code?: string;
   country_name?: string;
@@ -146,7 +159,6 @@ export type NpiPracticeLocation = {
   postal_code?: string;
   state?: string;
   telephone_number?: string;
-  update_date?: string;
 };
 
 export type NpiRecord = {
@@ -167,3 +179,14 @@ export type NppesSearchResult = {
   resultCount: number;
   results: NpiRecord[];
 };
+
+export type NppesRawSearchResult = {
+  result_count: number;
+  results: NpiRecord[];
+};
+
+export type NppesRawErrorResult = {
+  Errors: NppesApiIssue[];
+};
+
+export type NppesRawResponse = NppesRawSearchResult | NppesRawErrorResult;

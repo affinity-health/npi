@@ -49,6 +49,10 @@ for (const provider of result.results) {
 
 Search criteria use camel case. Returned records retain the field names from the NPPES JSON response so it remains straightforward to compare a result with the source API.
 
+The client covers every NPPES 2.1 query parameter: `number`, `enumerationType`, `taxonomyDescription`, `namePurpose`, `firstName`, `useFirstNameAlias`, `lastName`, `organizationName`, `addressPurpose`, `city`, `state`, `postalCode`, and `countryCode`, plus the `limit`, `skip`, and `pretty` request options.
+
+Use `query(criteria, options)` when you need the untouched NPPES top-level envelope. It returns either `{ result_count, results }` or `{ Errors }`. The higher-level `search` method converts successful envelopes to camel case and throws `NppesApiError` for upstream validation issues.
+
 Use `searchAll(criteria)` to follow every page CMS makes available for a search. NPPES returns at most 200 records per request and permits skipping at most 1,000 records, so a single search is limited to 1,200 records.
 
 ## Validate locally
@@ -85,7 +89,7 @@ NPPES is a public registry maintained by the Centers for Medicare & Medicaid Ser
 
 An active NPI record does **not** establish that a provider is licensed, credentialed, enrolled in Medicare, or permitted to prescribe. Those checks require the appropriate primary source, such as a state licensing board.
 
-See the [NPPES API documentation](https://npiregistry.cms.hhs.gov/api-page) for the upstream contract and search rules.
+CMS does not publish an OpenAPI document for this endpoint. The package contract is checked against the official [NPPES API documentation](https://npiregistry.cms.hhs.gov/api-page), its [JSON conversion field map](https://npiregistry.cms.hhs.gov/help-api/json-conversion), and representative live NPI-1, NPI-2, foreign, military, endpoint, secondary-location, and error responses.
 
 This project is independently maintained by Affinity Health and is not affiliated with or endorsed by CMS.
 
